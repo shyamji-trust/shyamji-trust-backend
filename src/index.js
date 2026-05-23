@@ -5,8 +5,10 @@ import dotenv from 'dotenv';
 import customerRoutes from './routes/customer.route.js';
 import paymentRoutes from './routes/payment.route.js';
 
+// Local dev: load from secrets file. In Docker, vars are injected by docker-compose.
 dotenv.config({
   path: String.raw`C:\Users\pryoucan\Documents\secrets\shyam-ji-backend\.env`,
+  quiet: true,
 });
 
 const app = express();

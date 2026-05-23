@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shyam-backend
+    ports:
+      - "5009:5001"
+    env_file:
+      - ../../../secrets/shyam-ji-backend/.env
+    environment:
+      PORT: "5001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
