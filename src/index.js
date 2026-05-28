@@ -4,26 +4,28 @@ import dotenv from 'dotenv';
 
 import customerRoutes from './routes/customer.route.js';
 import paymentRoutes from './routes/payment.route.js';
+import webhookRoutes from './routes/webhook.route.js';
 
-// Local dev: load from secrets file. In Docker, vars are injected by docker-compose.
 dotenv.config({
-  path: String.raw`C:\Users\pryoucan\Documents\secrets\shyam-ji-backend\.env`,
-  quiet: true,
+  path: String.raw`C:\Users\pryoucan\Documents\secrets\shyam-ji-backend\.env`
 });
 
 const app = express();
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 5000;
 
-const allowedOrigins = process.env.FRONTEND_URL?.split(',').map(o => o.trim()) ?? [];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:3001'];
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error(`CORS: origin ${origin} not allowed`));
-    },
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+}));
+
+app.use("/api/webhook", webhookRoutes);
+
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
@@ -35,4 +37,9 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, (error) => {
+  if(error) {
+    throw new Error(error);
+  }
+  console.log(`Server is running on port ${port}`);
+});

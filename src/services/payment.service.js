@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import getSupabase from "../config/db.config.js";
 import { getRazorpay } from "../config/razorpay.config.js";
 
@@ -9,6 +9,8 @@ export const createOrderService = async (customerId, totalAmount) => {
     receipt: `receipt#${Date.now()}`,
   });
 
+  const qrToken = randomUUID();
+
   const { data, error } = await getSupabase()
     .from("payments")
     .insert([{
@@ -17,12 +19,13 @@ export const createOrderService = async (customerId, totalAmount) => {
       amount: order.amount,
       currency: order.currency,
       status: "PENDING",
+      qr_token: qrToken,
     }])
     .select()
     .single();
 
   if (error) throw error;
-  return { order, payment: data, key_id: process.env.TEST_API_KEY };
+  return { order, payment: data, key_id: process.env.TEST_API_KEY, qr_token: qrToken };
 };
 
 export const verifyPaymentService = async ({
@@ -31,8 +34,7 @@ export const verifyPaymentService = async ({
   razorpay_signature,
 }) => {
   const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.TEST_KEY_SECRET)
+  const expectedSignature = createHmac("sha256", process.env.TEST_KEY_SECRET)
     .update(body)
     .digest("hex");
 
@@ -46,7 +48,7 @@ export const verifyPaymentService = async ({
     .from("payments")
     .update({
       razorpay_payment_id,
-      status: "PAID",
+      status: "COMPLETED",
     })
     .eq("razorpay_order_id", razorpay_order_id)
     .select()
@@ -56,15 +58,20 @@ export const verifyPaymentService = async ({
   return data;
 };
 
-export const scanPaymentService = async (orderId) => {
+export const scanPaymentService = async (qrToken) => {
   const { data, error } = await getSupabase()
     .from("payments")
     .select("*, customers(*)")
-    .eq("razorpay_order_id", orderId)
+    .eq("qr_token", qrToken)
     .single();
 
-  if (error) throw error;
-  if (data.status !== "PAID") {
+  if (error) {
+    const err = new Error("Invalid or unverified ticket QR Code");
+    err.status = 404;
+    throw err;
+  }
+
+  if (data.status !== "COMPLETED") {
     const err = new Error("Payment not completed for this QR code");
     err.status = 400;
     throw err;
@@ -77,7 +84,7 @@ export const scanPaymentService = async (orderId) => {
   const { data: updated, error: updateError } = await getSupabase()
     .from("payments")
     .update({ scanned: true })
-    .eq("razorpay_order_id", orderId)
+    .eq("qr_token", qrToken)
     .select("*, customers(*)")
     .single();
 
