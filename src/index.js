@@ -6,15 +6,13 @@ import customerRoutes from './routes/customer.route.js';
 import paymentRoutes from './routes/payment.route.js';
 import webhookRoutes from './routes/webhook.route.js';
 
-dotenv.config({
-  path: String.raw`C:\Users\pryoucan\Documents\secrets\shyam-ji-backend\.env`
-});
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',')
   : ['http://localhost:3000', 'http://localhost:3001'];
 
 app.use(cors({
