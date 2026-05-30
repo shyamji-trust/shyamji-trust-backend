@@ -7,9 +7,7 @@ import paymentRoutes from './routes/payment.route.js';
 import webhookRoutes from './routes/webhook.route.js';
 import path from 'node:path';
 
-dotenv.config({
-  path: String.raw`C:\Users\pryoucan\Documents\secrets\shyam-ji-backend/.env`
-});
+dotenv.config();
 
 const app = express();
 
