@@ -45,18 +45,37 @@ export const verifyPaymentService = async ({
     throw err;
   }
 
-  const { data, error } = await getSupabase()
+  const { data: updatedRows, error } = await getSupabase()
     .from("payments")
-    .update({
-      razorpay_payment_id,
-      status: "COMPLETED",
-    })
+    .update({ razorpay_payment_id, status: "COMPLETED" })
     .eq("razorpay_order_id", razorpay_order_id)
-    .select()
-    .single();
+    .neq("status", "COMPLETED")
+    .select();
 
   if (error) throw error;
-  return data;
+
+  // If 0 rows updated, payment was already COMPLETED (webhook ran first) — fetch existing record
+  let paymentData;
+  if (updatedRows && updatedRows.length > 0) {
+    paymentData = updatedRows[0];
+  } else {
+    const { data: existing, error: fetchError } = await getSupabase()
+      .from("payments")
+      .select()
+      .eq("razorpay_order_id", razorpay_order_id)
+      .single();
+    if (fetchError) throw fetchError;
+    paymentData = existing;
+  }
+
+  const { data: customer, error: customerError } = await getSupabase()
+    .from("customers")
+    .select("reg_no")
+    .eq("id", paymentData.customer_id)
+    .single();
+
+  if (customerError) throw customerError;
+  return { ...paymentData, reg_no: customer.reg_no };
 };
 
 export const scanPaymentService = async (qrToken) => {

@@ -22,11 +22,12 @@ export const handleWebhook = async (req, res) => {
 
     if (eventData.event === "order.paid") {
       const razorpayOrderId = eventData.payload.order.entity.id;
-      console.log(`Webhook: Processing payment for Order ID: ${razorpayOrderId}`);
+      const razorpayPaymentId = eventData.payload.payment?.entity?.id || null;
+      console.log(`Webhook: Processing payment for Order ID: ${razorpayOrderId}, Payment ID: ${razorpayPaymentId}`);
 
       const { data: updatedPayment, error } = await getSupabase()
         .from("payments")
-        .update({ status: "COMPLETED" })
+        .update({ status: "COMPLETED", razorpay_payment_id: razorpayPaymentId })
         .eq("razorpay_order_id", razorpayOrderId)
         .neq("status", "COMPLETED")
         .select();
