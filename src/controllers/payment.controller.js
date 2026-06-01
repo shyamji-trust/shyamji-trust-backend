@@ -27,12 +27,14 @@ export const createOrder = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    console.log(`[/api/payments/verify] Request received for order: ${razorpay_order_id}`);
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ error: "razorpay_order_id, razorpay_payment_id, and razorpay_signature are all required" });
     }
 
     const payment = await verifyPaymentService({ razorpay_order_id, razorpay_payment_id, razorpay_signature });
+    console.log(`[/api/payments/verify] Payment verified successfully for order: ${razorpay_order_id}`);
     return res.json({ success: true, data: payment });
   } catch (error) {
     console.error("Error in verifyPayment controller:", error);

@@ -43,6 +43,8 @@ export const submitCustomer = async (req, res) => {
     if (isNaN(parsedTotal) || parsedTotal <= 0)
       return res.status(400).json({ error: 'Total amount must be greater than 0' });
 
+    const platform_fee_plus_gst = Math.ceil(parsedTotal / (1 - 0.0236)) - parsedTotal;
+
     console.log('[/api/customers] Validation passed, inserting to Supabase...');
     const customer = await createCustomer({
       name: String(name).trim(),
@@ -55,6 +57,7 @@ export const submitCustomer = async (req, res) => {
       meet_mahant_ji: true,
       total_amount: parsedTotal,
       mahant_meeting_amount: parseFloat(mahant_meeting_amount) || 0,
+      platform_fee_plus_gst,
     });
 
     console.log('[/api/customers] Customer created successfully:', customer?.id);
