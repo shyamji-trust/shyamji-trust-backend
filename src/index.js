@@ -23,13 +23,14 @@ app.use(cors({
   },
 }));
 
+// Must be before express.json() so req.body is a raw Buffer for HMAC verification
+app.use("/api/webhook", express.raw({ type: 'application/json' }), webhookRoutes);
 
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/customers', customerRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use("/api/webhook", webhookRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
