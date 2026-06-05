@@ -1,4 +1,4 @@
-import { createOrderService, verifyPaymentService, scanPaymentService } from "../services/payment.service.js";
+import { createOrderService, verifyPaymentService, scanPaymentService, receiptPaymentService } from "../services/payment.service.js";
 
 export const createOrder = async (req, res) => {
   try {
@@ -39,6 +39,19 @@ export const verifyPayment = async (req, res) => {
   } catch (error) {
     console.error("Error in verifyPayment controller:", error);
     return res.status(error.status || 500).json({ error: error.message || "Failed to verify payment" });
+  }
+};
+
+export const getReceipt = async (req, res) => {
+  try {
+    const { qrToken } = req.params;
+    if (!qrToken) return res.status(400).json({ error: "qrToken is required" });
+
+    const data = await receiptPaymentService(qrToken);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error("Error in getReceipt controller:", error);
+    return res.status(error.status || 500).json({ error: error.message || "Failed to fetch receipt" });
   }
 };
 

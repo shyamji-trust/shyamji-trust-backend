@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import getSupabase from "../config/db.config.js";
 import { getRazorpay } from "../config/razorpay.config.js";
+import { sendWhatsappMessage } from "./whatsapp.service.js";
 
 export const createOrderService = async (customerId, totalAmount) => {
   const order = await getRazorpay().orders.create({
@@ -70,12 +71,47 @@ export const verifyPaymentService = async ({
 
   const { data: customer, error: customerError } = await getSupabase()
     .from("customers")
-    .select("reg_no")
+    .select("reg_no, phone_no")
     .eq("id", paymentData.customer_id)
     .single();
 
   if (customerError) throw customerError;
+
+  if (updatedRows && updatedRows.length > 0) {
+    sendWhatsappMessage({
+      phone_no: customer.phone_no,
+      reg_no: customer.reg_no,
+      qr_token: paymentData.qr_token,
+      created_at: paymentData.created_at,
+    }).catch(err => console.log("WhatsApp error:", JSON.stringify(err.response?.data ?? err.message, null, 2)));
+  }
+
   return { ...paymentData, reg_no: customer.reg_no };
+};
+
+export const receiptPaymentService = async (qrToken) => {
+  const { data, error } = await getSupabase()
+    .from("payments")
+    .select("*, customers(*)")
+    .eq("qr_token", qrToken)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      const err = new Error("Receipt not found");
+      err.status = 404;
+      throw err;
+    }
+    throw error;
+  }
+
+  if (data.status !== "COMPLETED") {
+    const err = new Error("Payment not completed");
+    err.status = 400;
+    throw err;
+  }
+
+  return data;
 };
 
 export const scanPaymentService = async (qrToken) => {
@@ -103,17 +139,5 @@ export const scanPaymentService = async (qrToken) => {
     throw err;
   }
 
-  if (data.scanned) {
-    return { alreadyScanned: true, customer: data.customers, payment: data };
-  }
-
-  const { data: updated, error: updateError } = await getSupabase()
-    .from("payments")
-    .update({ scanned: true })
-    .eq("qr_token", qrToken)
-    .select("*, customers(*)")
-    .single();
-
-  if (updateError) throw updateError;
-  return { alreadyScanned: false, customer: updated.customers, payment: updated };
+  return { alreadyScanned: data.scanned, customer: data.customers, payment: data };
 };

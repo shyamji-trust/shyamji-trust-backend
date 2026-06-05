@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import customerRoutes from './routes/customer.route.js';
 import paymentRoutes from './routes/payment.route.js';
 import webhookRoutes from './routes/webhook.route.js';
-import path from 'node:path';
 
 dotenv.config();
 
@@ -24,13 +23,13 @@ app.use(cors({
   },
 }));
 
-app.use("/api/webhook", webhookRoutes);
 
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/customers', customerRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use("/api/webhook", webhookRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
